@@ -121,6 +121,50 @@ func CreateSignedEnvelopeWithTLSBinding(
 	return env, nil
 }
 
+// CreateSignedEnvelopeWithTLSBinding creates a signed envelope of the desired
+// type, with marshaled dataMsg and signs it. It also includes a TLS cert hash
+// into the channel header
+func CreateSignedEnvelopeWithSignatureHeader(
+	txType common.HeaderType,
+	channelID string,
+	signer Signer,
+	signatureHeader *common.SignatureHeader,
+	dataMsg proto.Message,
+	msgVersion int32,
+	epoch uint64,
+	tlsCertHash []byte,
+) (*common.Envelope, error) {
+	payloadChannelHeader := MakeChannelHeader(txType, msgVersion, channelID, epoch)
+	payloadChannelHeader.TlsCertHash = tlsCertHash
+
+	data, err := proto.Marshal(dataMsg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error marshaling")
+	}
+
+	paylBytes := MarshalOrPanic(
+		&common.Payload{
+			Header: MakePayloadHeader(payloadChannelHeader, signatureHeader),
+			Data:   data,
+		},
+	)
+
+	var sig []byte
+	if signer != nil {
+		sig, err = signer.Sign(paylBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	env := &common.Envelope{
+		Payload:   paylBytes,
+		Signature: sig,
+	}
+
+	return env, nil
+}
+
 // Signer is the interface needed to sign a transaction
 type Signer interface {
 	Sign(msg []byte) ([]byte, error)
