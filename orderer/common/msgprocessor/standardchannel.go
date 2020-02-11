@@ -118,16 +118,18 @@ func (s *StandardChannel) ProcessNormalMsg(env *cb.Envelope) (configSeq uint64, 
 // return the resulting config message and the configSeq the config was computed from.  If the config impetus message
 // is invalid, an error is returned.
 func (s *StandardChannel) ProcessConfigUpdateMsg(env *cb.Envelope) (config *cb.Envelope, configSeq uint64, err error) {
-	logger.Debugf("Processing config update message for exisitng channel %s", s.support.ChannelID())
+	logger.Errorf("Processing config update message for exisitng channel %s", s.support.ChannelID())
 
 	// Call Sequence first.  If seq advances between proposal and acceptance, this is okay, and will cause reprocessing
 	// however, if Sequence is called last, then a success could be falsely attributed to a newer configSeq
 	seq := s.support.Sequence()
+	logger.Errorf("!!!WTL applying filters")
 	err = s.filters.Apply(env)
 	if err != nil {
 		return nil, 0, errors.WithMessage(err, "config update for existing channel did not pass initial checks")
 	}
 
+	logger.Errorf("!!!WTL proposing config update")
 	configEnvelope, err := s.support.ProposeConfigUpdate(env)
 	if err != nil {
 		return nil, 0, errors.WithMessagef(err, "error applying config update to existing channel '%s'", s.support.ChannelID())

@@ -64,10 +64,10 @@ func update(cmd *cobra.Command, args []string, cf *ChannelCmdFactory) error {
 		return err
 	}
 
-	sCtxEnv, err := sanityCheckAndSignConfigTx(ctxEnv, cf.Signer)
-	if err != nil {
-		return err
-	}
+	// sCtxEnv, err := sanityCheckAndSignConfigTx(ctxEnv, cf.Signer)
+	// if err != nil {
+	// 	return err
+	// }
 
 	var broadcastClient common.BroadcastClient
 	broadcastClient, err = cf.BroadcastFactory()
@@ -76,7 +76,8 @@ func update(cmd *cobra.Command, args []string, cf *ChannelCmdFactory) error {
 	}
 
 	defer broadcastClient.Close()
-	err = broadcastClient.Send(sCtxEnv)
+	// err = broadcastClient.Send(sCtxEnv)
+	err = broadcastClient.Send(ctxEnv)
 	if err != nil {
 		return err
 	}

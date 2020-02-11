@@ -75,6 +75,61 @@ func BasicSolo() *Config {
 	}
 }
 
+// MostBasicSolo is a configuration wtih one organization and one peer.
+func MostBasicSolo() *Config {
+	return &Config{
+		Organizations: []*Organization{{
+			Name:          "OrdererOrg",
+			MSPID:         "OrdererMSP",
+			Domain:        "example.com",
+			EnableNodeOUs: false,
+			Users:         0,
+			CA:            &CA{Hostname: "ca"},
+		}, {
+			Name:          "Org1",
+			MSPID:         "Org1MSP",
+			Domain:        "org1.example.com",
+			EnableNodeOUs: false,
+			Users:         2,
+			CA:            &CA{Hostname: "ca"},
+		}},
+		Consortiums: []*Consortium{{
+			Name: "SampleConsortium",
+			Organizations: []string{
+				"Org1",
+			},
+		}},
+		Consensus: &Consensus{
+			Type: "solo",
+		},
+		SystemChannel: &SystemChannel{
+			Name:    "systemchannel",
+			Profile: "TwoOrgsOrdererGenesis",
+		},
+		Orderers: []*Orderer{
+			{Name: "orderer", Organization: "OrdererOrg"},
+		},
+		Channels: []*Channel{
+			{Name: "testchannel", Profile: "TwoOrgsChannel"},
+		},
+		Peers: []*Peer{{
+			Name:         "peer0",
+			Organization: "Org1",
+			Channels: []*PeerChannel{
+				{Name: "testchannel", Anchor: true},
+			},
+		}},
+		Profiles: []*Profile{{
+			Name:     "TwoOrgsOrdererGenesis",
+			Orderers: []string{"orderer"},
+		}, {
+			Name:          "TwoOrgsChannel",
+			Consortium:    "SampleConsortium",
+			Organizations: []string{"Org1"},
+		}},
+	}
+}
+
 // FullSolo is a configuration wtih two organizations and two peers per org.
 func FullSolo() *Config {
 	config := BasicSolo()
