@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -20,7 +19,6 @@ import (
 	"github.com/hyperledger/fabric/integration/nwo"
 	"github.com/hyperledger/fabric/integration/nwo/commands"
 	"github.com/hyperledger/fabric/internal/configtxlator/update"
-	"github.com/hyperledger/fabric/internal/pkg/identity"
 	"github.com/hyperledger/fabric/pkg/config"
 	"github.com/hyperledger/fabric/protoutil"
 	. "github.com/onsi/ginkgo"
@@ -37,9 +35,10 @@ var _ = Describe("Config", func() {
 		network *nwo.Network
 		// chaincode nwo.Chaincode
 		process ifrit.Process
-		signer  identity.SignerSerializer
+		// signer  identity.SignerSerializer
 		peer    *nwo.Peer
 		orderer *nwo.Orderer
+		mspDir  string
 	)
 
 	BeforeEach(func() {
@@ -58,9 +57,7 @@ var _ = Describe("Config", func() {
 
 		network.CreateAndJoinChannel(network.Orderer("orderer"), "testchannel")
 		peer = network.Peer("Org1", "peer0")
-		mspDir := network.PeerUserMSPDir(peer, "Admin")
-		fmt.Printf("!!!WTL mspDir: %s\n", mspDir)
-		time.Sleep(time.Minute)
+		mspDir = network.PeerUserMSPDir(peer, "Admin")
 		orderer = network.Orderer("orderer")
 	})
 
@@ -72,22 +69,10 @@ var _ = Describe("Config", func() {
 		if network != nil {
 			network.Cleanup()
 		}
-		os.RemoveAll(testDir)
+		// os.RemoveAll(testDir)
 	})
 
 	Describe("channel config", func() {
-		BeforeEach(func() {
-			// core := network.ReadPeerConfig(peer)
-			// err := mspmgmt.LoadLocalMspWithType(core.Peer.MSPConfigPath, factory.GetDefaultOpts(), core.Peer.LocalMSPID, core.Peer.LocalMspType)
-			// Expect(err).NotTo(HaveOccurred())
-			// fmt.Printf("!!!WTL configpath: %s\n", core.Peer.MSPConfigPath)
-			// fmt.Printf("!!!WTL mpsid: %s\n", core.Peer.LocalMSPID)
-			// fmt.Printf("!!!WTL msptype: %s\n", core.Peer.LocalMspType)
-			// signer, err = mspmgmt.GetLocalMSP(factory.GetDefault()).GetDefaultSigningIdentity()
-			// Expect(err).NotTo(HaveOccurred())
-			// fmt.Printf("!!!WTL default signer: %+v\n", signer)
-		})
-
 		It("creates a signature for a given config update", func() {
 			By("creating a channel config update")
 			configUpdate := createChannelUpdate(network, peer, network.Orderer("orderer"), "testchannel")
@@ -95,12 +80,20 @@ var _ = Describe("Config", func() {
 			// By("using peer-channel-signconfigtx to sign")
 			// configUpdateEnvelope, _ /*peerSignConfigTxSignature*/, updateFile := getSignatureFromPeerChannelSignConfigTx(network, peer, configUpdate, "testchannel", testDir)
 			// Expect(configUpdateEnvelope.Signatures).To(HaveLen(1))
-
 			// By("printing the signconfigtx signature")
 			// protolator.DeepMarshalJSON(os.Stdout, peerSignConfigTxSignature)
 
+			By("creating the signer")
+			adminCert, err := ioutil.ReadFile(filepath.Join(mspDir, "admincerts", "Admin@org1.example.com-cert.pem"))
+			Expect(err).NotTo(HaveOccurred())
+			privCert, err := ioutil.ReadFile(filepath.Join(mspDir, "keystore", "priv_sk"))
+			Expect(err).NotTo(HaveOccurred())
+			fmt.Printf("!! DL msp dir : %+v\n", mspDir)
+			signer, err := config.NewSigner(adminCert, privCert, "Org1MSP")
+			Expect(err).NotTo(HaveOccurred())
+
 			By("creating the detached signature")
-			detachedSignature, err := config.SignChannelUpdate(configUpdate, signer)
+			detachedSignature, err := config.SignConfigUpdate(configUpdate, signer)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("printing the detached signature")
@@ -113,9 +106,9 @@ var _ = Describe("Config", func() {
 					detachedSignature,
 				},
 			}
-			// signedEnvelope, err := protoutil.CreateSignedEnvelopeWithSignatureHeader(common.HeaderType_CONFIG_UPDATE, "testchannel", signer, sh, configUpdateEnvelope, 0, 0, nil)
+
 			By("creating a signed config update envelope")
-			signedEnvelope, err := protoutil.CreateSignedEnvelope(common.HeaderType_CONFIG_UPDATE, "testchannel", signer, configUpdateEnvelope, 0, 0)
+			signedEnvelope, err := protoutil.CreateSignedEnvelope(common.HeaderType_CONFIG_UPDATE, "testchannel", nil, configUpdateEnvelope, 0, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("printing the signed envelope")
@@ -126,7 +119,6 @@ var _ = Describe("Config", func() {
 			err = ioutil.WriteFile(updateFile, config.MarshalOrPanic(signedEnvelope), 0660)
 			Expect(err).NotTo(HaveOccurred())
 
-			// var currentBlockNumber uint64
 			// get current configuration block number
 			currentBlockNumber := nwo.CurrentConfigBlockNumber(network, peer, nil, "testchannel")
 

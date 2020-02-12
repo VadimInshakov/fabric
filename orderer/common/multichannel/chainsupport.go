@@ -128,7 +128,6 @@ func (cs *ChainSupport) Validate(configEnv *cb.ConfigEnvelope) error {
 // ProposeConfigUpdate validates a config update using the underlying configtx.Validator
 // and the consensus.MetadataValidator.
 func (cs *ChainSupport) ProposeConfigUpdate(configtx *cb.Envelope) (*cb.ConfigEnvelope, error) {
-	logger.Errorf("!!!WTL made it here")
 	env, err := cs.ConfigtxValidator().ProposeConfigUpdate(configtx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed proposing config update")

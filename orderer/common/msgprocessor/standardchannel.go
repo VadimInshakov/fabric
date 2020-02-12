@@ -123,13 +123,11 @@ func (s *StandardChannel) ProcessConfigUpdateMsg(env *cb.Envelope) (config *cb.E
 	// Call Sequence first.  If seq advances between proposal and acceptance, this is okay, and will cause reprocessing
 	// however, if Sequence is called last, then a success could be falsely attributed to a newer configSeq
 	seq := s.support.Sequence()
-	logger.Errorf("!!!WTL applying filters")
 	err = s.filters.Apply(env)
 	if err != nil {
 		return nil, 0, errors.WithMessage(err, "config update for existing channel did not pass initial checks")
 	}
 
-	logger.Errorf("!!!WTL proposing config update")
 	configEnvelope, err := s.support.ProposeConfigUpdate(env)
 	if err != nil {
 		return nil, 0, errors.WithMessagef(err, "error applying config update to existing channel '%s'", s.support.ChannelID())

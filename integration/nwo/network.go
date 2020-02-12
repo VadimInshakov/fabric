@@ -1164,7 +1164,6 @@ func (n *Network) peerCommand(command Command, tlsDir string, env ...string) *ex
 	}
 
 	if ClientAuthEnabled(command) {
-		fmt.Printf("!!!WTL client auth enabled!\n")
 		certfilePath := filepath.Join(tlsDir, "client.crt")
 		keyfilePath := filepath.Join(tlsDir, "client.key")
 
